@@ -4,8 +4,21 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QButtonGroup, QFileDialog, QMessageBox)
 from PyQt5.QtCore import Qt
 
+
 ruAlphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789"
 enAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+def str_mod(s, n):
+    """Вычисляет остаток от деления числа, записанного строкой, на n."""
+    res = 0
+    negative = False
+    for i, ch in enumerate(s):
+        if i == 0 and ch == '-':
+            negative = True
+            continue
+        if ch.isdigit():
+            res = (res * 10 + int(ch)) % n
+    return -res if negative else res
 
 
 class CaesarCracker(QMainWindow):
@@ -111,12 +124,13 @@ class CaesarCracker(QMainWindow):
         if not text:
             QMessageBox.warning(self, "Ошибка", "Загрузите файл и очистите текст")
             return
+        offset_str = self.key_edit.text()
+        alph = self.alphabets[self.lang]
         try:
-            offset = int(self.key_edit.text())
-        except ValueError:
+            offset = str_mod(offset_str, len(alph))
+        except Exception:
             QMessageBox.warning(self, "Ошибка", "Некорректное значение ключа")
             return
-        alph = self.alphabets[self.lang]
         encoded = encryptText(text, alph, offset)
         self.cipher_text.setPlainText(encoded)
 
@@ -142,9 +156,7 @@ class CaesarCracker(QMainWindow):
             return
 
         shift = (alph.index(most_freq) - alph.index(expected)) % len(alph)
-
         decrypted = decryptText(ciphertext, alph, shift)
-
         self.dec_text.setPlainText(decrypted)
         self.found_key_label.setText(str(shift))
 

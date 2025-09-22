@@ -8,6 +8,19 @@ ruAlphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ
 enAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 
+def str_mod(s, n):
+    """Вычисляет остаток от деления числа, записанного строкой, на n."""
+    res = 0
+    negative = False
+    for i, ch in enumerate(s):
+        if i == 0 and ch == '-':
+            negative = True
+            continue
+        if ch.isdigit():
+            res = (res * 10 + int(ch)) % n
+    return -res if negative else res
+
+
 class MyApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -38,9 +51,15 @@ class MyApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.outputTextW.setPlainText("")
 
         if self.check(text):
-            offset = self.keyText.text()
+            offset_str = self.keyText.text()
+            if self.lang == 'RU':
+                alph = ruAlphabet
+            else:
+                alph = enAlphabet
+            # вычисляем эффективный сдвиг
             try:
-                offset = int(offset)
+                # поддержка больших и отрицательных ключей
+                offset = str_mod(offset_str, len(alph))
             except Exception:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
@@ -51,10 +70,7 @@ class MyApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
                 return
             self.lastEncryptedKey = offset
             self.lastEncryptedLang = self.lang
-            if self.lang == 'RU':
-                encodedText = encryptText(text, ruAlphabet, offset)
-            else:
-                encodedText = encryptText(text, enAlphabet, offset)
+            encodedText = encryptText(text, alph, offset)
             self.outputTextW.setPlainText(encodedText)
 
     def check(self, text):
@@ -82,9 +98,12 @@ class MyApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
     def decrypt(self):
         if self.lastEncryptedLang == 'RU':
-            decryptedText = decryptText(self.outputTextW.toPlainText(), ruAlphabet, self.lastEncryptedKey)
+            alph = ruAlphabet
         else:
-            decryptedText = decryptText(self.outputTextW.toPlainText(), enAlphabet, self.lastEncryptedKey)
+            alph = enAlphabet
+        # корректно обрабатываем большие и отрицательные ключи
+        offset = str_mod(str(self.lastEncryptedKey), len(alph))
+        decryptedText = decryptText(self.outputTextW.toPlainText(), alph, offset)
         self.outputTextW_2.setPlainText(decryptedText)
 
 
