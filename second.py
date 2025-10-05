@@ -9,7 +9,8 @@ ruAlphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ
 enAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 def str_mod(s, n):
-    """Вычисляет остаток от деления числа, записанного строкой, на n."""
+    if s == "-":
+        return False
     res = 0
     negative = False
     for i, ch in enumerate(s):
@@ -18,6 +19,8 @@ def str_mod(s, n):
             continue
         if ch.isdigit():
             res = (res * 10 + int(ch)) % n
+        else:
+            return false
     return -res if negative else res
 
 
@@ -128,6 +131,8 @@ class CaesarCracker(QMainWindow):
         alph = self.alphabets[self.lang]
         try:
             offset = str_mod(offset_str, len(alph))
+            if offset is False:
+                raise Exception
         except Exception:
             QMessageBox.warning(self, "Ошибка", "Некорректное значение ключа")
             return

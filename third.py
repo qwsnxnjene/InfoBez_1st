@@ -80,14 +80,23 @@ class VigenereCracker(QMainWindow):
         self.found_key_label = QLabel("Не найден")
         layout.addWidget(self.found_key_label)
 
-        # Алфавиты и ожидаемые частые буквы
+        # Алфавиты и ожидаемые частоты
         self.alphabets = {
             'RU': ruAlphabet,
             'EN': enAlphabet
         }
-        self.expected = {
-            'RU': 'о',  # Наиболее частая в русском
-            'EN': 'e'   # Наиболее частая в английском
+        self.expected_freq = {
+            'RU': {
+                'а': 0.0764, 'б': 0.0201, 'в': 0.0438, 'г': 0.0172, 'д': 0.0309, 'е': 0.0875, 'ё': 0.0020, 'ж': 0.0101, 'з': 0.0148, 'и': 0.0709,
+                'й': 0.0121, 'к': 0.0330, 'л': 0.0496, 'м': 0.0317, 'н': 0.0678, 'о': 0.1118, 'п': 0.0247, 'р': 0.0423, 'с': 0.0497, 'т': 0.0609,
+                'у': 0.0222, 'ф': 0.0021, 'х': 0.0095, 'ц': 0.0039, 'ч': 0.0140, 'ш': 0.0072, 'щ': 0.0030, 'ъ': 0.0002, 'ы': 0.0236, 'ь': 0.0184,
+                'э': 0.0036, 'ю': 0.0047, 'я': 0.0196, '0': 0.0, '1': 0.0, '2': 0.0, '3': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0, '8': 0.0, '9': 0.0
+            },
+            'EN': {
+                'a': 0.08167, 'b': 0.01492, 'c': 0.02782, 'd': 0.04253, 'e': 0.12702, 'f': 0.02228, 'g': 0.02015, 'h': 0.06094, 'i': 0.06966, 'j': 0.00153,
+                'k': 0.00772, 'l': 0.04025, 'm': 0.02406, 'n': 0.06749, 'o': 0.07507, 'p': 0.01929, 'q': 0.00095, 'r': 0.05987, 's': 0.06327, 't': 0.09056,
+                'u': 0.02758, 'v': 0.00978, 'w': 0.02360, 'x': 0.00150, 'y': 0.01974, 'z': 0.00074, '0': 0.0, '1': 0.0, '2': 0.0, '3': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0, '8': 0.0, '9': 0.0
+            }
         }
 
         # Загруженный сырой текст (до очистки)
@@ -141,10 +150,7 @@ class VigenereCracker(QMainWindow):
             QMessageBox.warning(self, "Ошибка", "Зашифруйте текст сначала")
             return
         alph = self.alphabets[self.lang]
-        expected = self.expected[self.lang]
-        if expected not in alph:
-            QMessageBox.warning(self, "Ошибка", "Ожидаемая буква не в алфавите")
-            return
+        expected_freq = self.expected_freq[self.lang]
 
         # Шаг 1: Kasiski - найти длину ключа
         key_length = self.kasiski_test(ciphertext, alph)
@@ -158,7 +164,7 @@ class VigenereCracker(QMainWindow):
             sub_cipher = ciphertext[i::key_length]
             if len(sub_cipher) < 10:  # Минимум символов для анализа
                 continue
-            shift = self.find_shift(sub_cipher, alph, expected)
+            shift = self.find_shift(sub_cipher, alph, expected_freq)
             shifts.append(shift)
 
         if len(shifts) < key_length:
@@ -166,7 +172,7 @@ class VigenereCracker(QMainWindow):
             key_length = len(shifts)
 
         # Шаг 3: Построить ключ
-        key_chars = [alph[shift] for shift in shifts]
+        key_chars = ''.join(alph[shift] for shift in shifts)
         found_key = ''.join(key_chars)
 
         # Шаг 4: Расшифровать
@@ -186,26 +192,45 @@ class VigenereCracker(QMainWindow):
                         distance = j - i
                         repeats[distance] += 1
 
-        list_of_dists = [dist for dist, count in repeats.items() if count >= 1]
-        if not list_of_dists:
+        if not repeats:
             return 0
 
-        max_count = 0
+        max_score = 0
         key_length = 1
         for L in range(2, 21):
-            count = sum(1 for d in list_of_dists if d % L == 0)
-            if count > max_count or (count == max_count and L > key_length):
-                max_count = count
+            score = sum(repeats[dist] for dist in repeats if dist % L == 0)
+            if score > max_score or (score == max_score and L < key_length):
+                max_score = score
                 key_length = L
         return key_length
 
-    def find_shift(self, text, alph, expected):
-        freq = collections.Counter(c for c in text if c in alph)
-        if not freq:
+    def find_shift(self, text, alph, expected_freq):
+        len_alph = len(alph)
+        min_chi = float('inf')
+        best_shift = 0
+        total = len(text)
+        if total == 0:
             return 0
-        most_freq = max(freq, key=freq.get)
-        shift = (alph.index(most_freq) - alph.index(expected)) % len(alph)
-        return shift
+        for s in range(len_alph):
+            counts = collections.Counter()
+            for c in text:
+                if c in alph:
+                    p_index = (alph.index(c) - s) % len_alph
+                    p = alph[p_index]
+                    counts[p] += 1
+            chi = 0.0
+            total_letters = sum(counts.values())
+            for letter, exp in expected_freq.items():
+                obs = counts[letter] / total_letters if total_letters > 0 else 0
+                if exp > 0:
+                    chi += (obs - exp) ** 2 / exp
+                else:
+                    if obs > 0:
+                        chi += obs ** 2 / 0.0001
+            if chi < min_chi:
+                min_chi = chi
+                best_shift = s
+        return best_shift
 
 
 def encryptVigenere(text, key, alph):

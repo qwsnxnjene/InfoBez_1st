@@ -9,7 +9,8 @@ enAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 
 def str_mod(s, n):
-    """Вычисляет остаток от деления числа, записанного строкой, на n."""
+    if s == "-":
+        return False
     res = 0
     negative = False
     for i, ch in enumerate(s):
@@ -18,6 +19,8 @@ def str_mod(s, n):
             continue
         if ch.isdigit():
             res = (res * 10 + int(ch)) % n
+        else:
+            return false
     return -res if negative else res
 
 
@@ -56,10 +59,10 @@ class MyApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
                 alph = ruAlphabet
             else:
                 alph = enAlphabet
-            # вычисляем эффективный сдвиг
             try:
-                # поддержка больших и отрицательных ключей
                 offset = str_mod(offset_str, len(alph))
+                if offset is False:
+                    raise Exception
             except Exception:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
@@ -97,15 +100,30 @@ class MyApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         return True
 
     def decrypt(self):
+        if str_mod(self.keyText.text(), len(ruAlphabet)) != self.lastEncryptedKey or\
+            str_mod(self.keyText.text(), len(enAlphabet)) != self.lastEncryptedKey:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Ошибка ввода")
+            msg.setInformativeText(f'Некорректное значение ключа')
+            msg.setWindowTitle("Исходное значение ключа не равно нынешнему!")
+            msg.exec_()
+            return
+
         if self.lastEncryptedLang == 'RU':
             alph = ruAlphabet
         else:
             alph = enAlphabet
-        # корректно обрабатываем большие и отрицательные ключи
         offset = str_mod(str(self.lastEncryptedKey), len(alph))
+        if offset is False:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Ошибка ввода")
+            msg.setInformativeText(f'Неверный ключ')
+            msg.setWindowTitle("Ошибка")
+            msg.exec_()
         decryptedText = decryptText(self.outputTextW.toPlainText(), alph, offset)
         self.outputTextW_2.setPlainText(decryptedText)
-
 
 
 def encryptText(text, alph, offset):
@@ -114,6 +132,7 @@ def encryptText(text, alph, offset):
         newIndex = (alph.index(letter) + offset) % len(alph)
         final += alph[newIndex]
     return final
+
 
 def decryptText(text, alph, offset):
     final = ''
