@@ -100,8 +100,9 @@ class MyApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         return True
 
     def decrypt(self):
-        if str_mod(self.keyText.text(), len(ruAlphabet)) != self.lastEncryptedKey or\
-            str_mod(self.keyText.text(), len(enAlphabet)) != self.lastEncryptedKey:
+        if (str_mod(self.keyText.text(), len(ruAlphabet)) != self.lastEncryptedKey and self.lang == "RU") or \
+                (str_mod(self.keyText.text(), len(enAlphabet)) != self.lastEncryptedKey and self.lang == "EN"):
+            print(repr(self.lastEncryptedKey), repr(str_mod(self.keyText.text(), len(ruAlphabet))))
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
             msg.setText("Ошибка ввода")

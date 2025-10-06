@@ -13,25 +13,22 @@ enAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 class VigenereCracker(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Шифр Виженера с взломом (Kasiski)")
+        self.setWindowTitle("Шифр Виженера с взломом")
         self.setGeometry(100, 100, 800, 700)
 
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
 
-        # Кнопка выбора файла
         self.file_btn = QPushButton("Выбрать файл")
         self.file_btn.clicked.connect(self.select_file)
         layout.addWidget(self.file_btn)
 
-        # Поле с текстом файла
         layout.addWidget(QLabel("Текст файла:"))
         self.orig_text = QTextEdit()
         self.orig_text.setReadOnly(True)
         layout.addWidget(self.orig_text)
 
-        # Выбор языка
         lang_layout = QHBoxLayout()
         lang_group = QButtonGroup()
         self.ru_radio = QRadioButton("RU")
@@ -46,41 +43,34 @@ class VigenereCracker(QMainWindow):
         lang_layout.addWidget(self.en_radio)
         layout.addLayout(lang_layout)
 
-        # Поле для ключа
         key_layout = QHBoxLayout()
         key_layout.addWidget(QLabel("Ключ:"))
-        self.key_edit = QLineEdit("ключ")
+        self.key_edit = QLineEdit("давай")
         key_layout.addWidget(self.key_edit)
         layout.addLayout(key_layout)
 
-        # Кнопка зашифровать
         self.encrypt_btn = QPushButton("Зашифровать")
         self.encrypt_btn.clicked.connect(self.encrypt)
         layout.addWidget(self.encrypt_btn)
 
-        # Поле с зашифрованным текстом
         layout.addWidget(QLabel("Зашифрованный текст:"))
         self.cipher_text = QTextEdit()
         self.cipher_text.setReadOnly(True)
         layout.addWidget(self.cipher_text)
 
-        # Кнопка взлом
         self.crack_btn = QPushButton("Взлом")
         self.crack_btn.clicked.connect(self.crack)
         layout.addWidget(self.crack_btn)
 
-        # Поле с расшифрованным текстом
         layout.addWidget(QLabel("Расшифрованный текст:"))
         self.dec_text = QTextEdit()
         self.dec_text.setReadOnly(True)
         layout.addWidget(self.dec_text)
 
-        # Вывод найденного ключа
         layout.addWidget(QLabel("Найденный ключ:"))
         self.found_key_label = QLabel("Не найден")
         layout.addWidget(self.found_key_label)
 
-        # Алфавиты и ожидаемые частоты
         self.alphabets = {
             'RU': ruAlphabet,
             'EN': enAlphabet
@@ -99,7 +89,6 @@ class VigenereCracker(QMainWindow):
             }
         }
 
-        # Загруженный сырой текст (до очистки)
         self.raw_text = ""
 
     def update_lang(self):
@@ -107,7 +96,7 @@ class VigenereCracker(QMainWindow):
             self.lang = 'RU'
         else:
             self.lang = 'EN'
-        # Переочищаем текст при смене языка
+
         if self.raw_text:
             self.clean_and_display()
 
@@ -152,17 +141,15 @@ class VigenereCracker(QMainWindow):
         alph = self.alphabets[self.lang]
         expected_freq = self.expected_freq[self.lang]
 
-        # Шаг 1: Kasiski - найти длину ключа
         key_length = self.kasiski_test(ciphertext, alph)
         if key_length == 0:
             QMessageBox.warning(self, "Ошибка", "Не удалось определить длину ключа")
             return
 
-        # Шаг 2: Для каждой позиции найти сдвиг
         shifts = []
         for i in range(key_length):
             sub_cipher = ciphertext[i::key_length]
-            if len(sub_cipher) < 10:  # Минимум символов для анализа
+            if len(sub_cipher) < 10:
                 continue
             shift = self.find_shift(sub_cipher, alph, expected_freq)
             shifts.append(shift)
@@ -171,11 +158,9 @@ class VigenereCracker(QMainWindow):
             QMessageBox.warning(self, "Предупреждение", "Недостаточно данных для полного ключа, используется частичный")
             key_length = len(shifts)
 
-        # Шаг 3: Построить ключ
         key_chars = ''.join(alph[shift] for shift in shifts)
         found_key = ''.join(key_chars)
 
-        # Шаг 4: Расшифровать
         decrypted = decryptVigenere(ciphertext, found_key, alph)
 
         self.dec_text.setPlainText(decrypted)
